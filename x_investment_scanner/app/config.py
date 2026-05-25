@@ -21,10 +21,20 @@ class DatabaseConfig:
 class ApiConfig:
     """数据源 API 配置。"""
 
-    provider: str = os.getenv("X_PROVIDER", "third_party")  # official / third_party
-    base_url: str = os.getenv("X_API_BASE_URL", "https://api.example.com")
+    provider: str = os.getenv("X_PROVIDER", "magical_export")  # magical_export / twitterapi_io / desearch
+    base_url: str = os.getenv("X_API_BASE_URL", "")
     api_key: str = os.getenv("X_API_KEY", "PLEASE_SET_X_API_KEY")
     timeout_seconds: int = int(os.getenv("X_API_TIMEOUT", "20"))
+    magical_export_path: str = os.getenv("X_MAGICAL_EXPORT_PATH", "data/sample_exports/magical_posts.jsonl")
+    desearch_search_path: str = os.getenv("DESEARCH_SEARCH_PATH", "/twitter/search")
+
+
+@dataclass
+class StorageConfig:
+    """抓取结果落盘配置。"""
+
+    raw_posts_dir: str = os.getenv("RAW_POSTS_DIR", "data/raw_posts")
+    candidate_accounts_path: str = os.getenv("CANDIDATE_ACCOUNTS_PATH", "data/candidate_accounts.json")
 
 
 @dataclass
@@ -50,6 +60,8 @@ class ScanPolicyConfig:
     tier_post_limit: Dict[str, int] = field(
         default_factory=lambda: {"S": 20, "A": 30, "B": 50, "Candidate": 100}
     )
+    tracked_users: List[str] = field(default_factory=lambda: ["macro_focus", "alpha_researcher"])
+    realtime_poll_seconds: int = int(os.getenv("REALTIME_POLL_SECONDS", "60"))
 
 
 @dataclass
@@ -97,6 +109,7 @@ class AppConfig:
 
     db: DatabaseConfig = field(default_factory=DatabaseConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
+    storage: StorageConfig = field(default_factory=StorageConfig)
     openai: OpenAIConfig = field(default_factory=OpenAIConfig)
     scan_policy: ScanPolicyConfig = field(default_factory=ScanPolicyConfig)
     filter: FilterConfig = field(default_factory=FilterConfig)

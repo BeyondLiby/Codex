@@ -2,21 +2,30 @@
 
 from datetime import datetime
 from app.config import CONFIG
+from app.ingestion.api_clients import BasePostClient
+from app.ingestion.models import SearchSpec
 from app.processing.relevance_filter import rule_based_filter
 from app.llm.classify_post import classify_post_quick
 from app.llm.extract_view import extract_investment_view
 from app.llm.investment_judge import judge_by_framework
 
 
-def fetch_new_posts(account: dict):
+def fetch_new_posts(account: dict, client: BasePostClient = None):
     """模拟抓取新增帖子。
 
-    实际项目中请替换为官方 API 或第三方 API 调用。
+    如果传入 client，就通过统一 API 适配层抓取；否则保持原来的 mock 输入，
+    方便 Notebook 和单元测试快速验证处理链路。
     """
+    if client:
+        spec = SearchSpec(
+            keywords=CONFIG.filter.keywords + CONFIG.filter.cashtags,
+            users=[account.get("username", "")],
+        )
+        return [post.to_storage_dict() for post in client.fetch_latest(spec, limit=CONFIG.scan_policy.tier_post_limit["A"])]
     return account.get("mock_posts", [])
 
 
-def run_scan_cycle(accounts: list[dict]):
+def run_scan_cycle(accounts: list[dict], client: BasePostClient = None):
     """执行一轮扫描。
 
     关键逻辑：
@@ -29,7 +38,7 @@ def run_scan_cycle(accounts: list[dict]):
     results = []
 
     for account in accounts:
-        posts = fetch_new_posts(account)
+        posts = fetch_new_posts(account, client=client)
 
         for post in posts:
             text = post.get("text", "")
@@ -53,6 +62,8 @@ def run_scan_cycle(accounts: list[dict]):
                 {
                     "account": account.get("username"),
                     "post_id": post.get("id"),
+                    "text": text,
+                    "media_urls": post.get("media_urls", []),
                     "extracted": extracted,
                     "judged": judged,
                     "processed_at": datetime.utcnow().isoformat(),
